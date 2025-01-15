@@ -6,14 +6,26 @@ This utility will scrapethe "Ultimate Guitar" website and obtain the tabulations
 """
 
 import requests
+import argparse
+import time
+import random
 from bs4 import BeautifulSoup
 
-class Scraper:
+class UltimateGuitarScraper:
     all_song_details = []
     
     def scrape_pages(self, pages):
-        for page in range(0, pages):
-            self._scrape_tab_urls(page + 1)
+        print("Beginning scraping of Ultimate Guitar for tabs.")
+        start_time = time.time()
+        for page in range(1, pages + 1):
+            print("Scraping page " + str(page) + "...")
+            self._scrape_tab_urls(page)
+        end_time = time.time()
+        
+        elapsed_time = int(end_time - start_time)
+        print(f"Scraping completed in {elapsed_time}s.")
+        print(f"Extracted details of {str(len(self.all_song_details))} songs.")
+        return self.all_song_details
         
     def _scrape_tab_urls(self, page):
         response = self._request_tab_explorer_page(page)
@@ -21,6 +33,8 @@ class Scraper:
         song_urls = self._parse_tab_urls(response)
         for song_url in song_urls:
             self._scrape_song_details(song_url)
+            #delaying to be respectful to website resources
+            time.sleep(random.uniform(1, 3))
         
     def _scrape_song_details(self, song_url):
         song_details = [song_url]
@@ -70,7 +84,7 @@ class Scraper:
             
             tab_section_cleaned = ''
             for tab_string in tab_strings:
-                #removes special characters
+                #removes remaining special characters
                 tab_string = tab_string.encode().decode('unicode_escape')
                 tab_section_cleaned = tab_section_cleaned + tab_string + '\n'
             #removes final trailing newline char
@@ -78,6 +92,14 @@ class Scraper:
             tab_complete.append(tab_section_cleaned)
             
         return tab_complete
-                
-scraper = Scraper()
-scraper.scrape_pages(1)
+    
+def main():
+    parser = argparse.ArgumentParser(description="Web scraper for guitar tabs")
+    parser.add_argument("-p", "--pages", type=int, default=1, help="Number of pages to scrape")
+    args = parser.parse_args()
+    
+    scraper = UltimateGuitarScraper()
+    scraper.scrape_pages(args.pages)
+
+if __name__ == '__main__':
+    main()

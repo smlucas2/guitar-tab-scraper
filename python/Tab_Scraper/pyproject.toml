@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tab-scraper"
+version = "0.1.0"
+description = "A Python-based web scraper for extracting guitar tabs from Ultimate Guitar"
+authors = [
+    {name = "Sean Lucas", email = "smlucas1993@gmail.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+keywords = ["web scraping", "guitar tabs", "Ultimate Guitar"]
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+]
+requires-python = ">=3.7"
+
+[project.scripts]
+tab-scraper = "tab_scraper.tab_scraper:main"
