@@ -22,6 +22,10 @@ class TestScraper(unittest.TestCase):
         song_details = self.scraper.scrape_pages(3)
         
         self.assertTrue(len(song_details) == 107)
+        
+    # TODO: Test scraping a single song URL
+    # TODO: Test failing when misusing command line flag
+    # TODO: Test using wrong data types when using flags
 
 if __name__ == '__main__':
     unittest.main()
