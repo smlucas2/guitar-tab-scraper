@@ -10,11 +10,15 @@ import argparse
 import time
 import random
 import json
+import csv
+from pathlib import Path
 from bs4 import BeautifulSoup
 
+# TODO: caching
+# TODO: specify output path
 class UltimateGuitarScraper:
     
-    def scrape_pages(self, pages):
+    def scrape_pages(self, pages, output_path):
         start_time = time.time()
         print("Beginning scraping of Ultimate Guitar for tabs.")
         
@@ -30,14 +34,27 @@ class UltimateGuitarScraper:
         print(f"Scraping completed in {elapsed_time}s.")
         print(f"Extracted details of {str(len(self.all_song_details))} songs.")
         
-        return all_song_details
+        self._output(all_song_details, output_path)
     
-    def scrape_song(self, song_url):
+    def scrape_song(self, song_url, output_path):
         print("Scraping song from Ultimate Guitar at URL [" + song_url + "].")
-        song_details = self._scrape_song_details(song_url)
+        all_song_details = [self._scrape_song_details(song_url)]
         print("Scraping completed.")
         
-        return song_details
+        self._output(all_song_details, output_path)
+    
+    def _output(self, all_song_details, output_path):
+        if output_path is None:
+            current_file = Path(__file__)
+            parent_directory = current_file.parent.parent
+            output_path = parent_directory / "output/output.csv"
+
+        with open(output_path, 'w', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=all_song_details[0].keys())
+            writer.writeheader()
+            
+            for song_details in all_song_details:
+                writer.writerow(song_details)
         
     def _scrape_tab_urls(self, page):
         page_url = self._build_explorer_page_url(page)
@@ -67,21 +84,21 @@ class UltimateGuitarScraper:
         song_view_data = song_data['tab_view']
         
         song_details_map = {'URL': song_url}
-        song_details_map['ID'] = self._get_data(song_tab_data, 'id')
         song_details_map['SONG_ID'] = self._get_data(song_tab_data, 'song_id')
         song_details_map['ARTIST_ID'] = self._get_data(song_tab_data, 'artist_id')
-        song_details_map['BAND_NAME'] = self._get_data(song_tab_data, 'artist_name')
+        tab_data = self._get_data(song_view_data, 'wiki_tab', 'content')
+        song_details_map['TAB_ID'] = self._get_data(song_tab_data, 'id')
         song_details_map['SONG_NAME'] = self._get_data(song_tab_data, 'song_name')
+        song_details_map['ARTIST_NAME'] = self._get_data(song_tab_data, 'artist_name')
+        song_details_map['TABS'] = tab_data.replace('[tab]', '').replace('[/tab]', '')
         song_details_map['DIFFICULTY'] = self._get_data(song_tab_data, 'difficulty')
         song_details_map['TUNING'] = self._get_data(song_view_data, 'meta', 'tuning', 'value')
         song_details_map['KEY'] = self._get_data(song_view_data, 'meta', 'tonality')
+        rating_data = self._get_data(song_tab_data, 'rating')
+        song_details_map['RATING'] = "{:.2f}".format(float(rating_data))
         song_details_map['VOTES'] = self._get_data(song_tab_data, 'votes')
         song_details_map['VIEWS'] = self._get_data(song_view_data, 'stats', 'view_total')
         song_details_map['FAVORITES'] = self._get_data(song_view_data, 'stats', 'favorites_count')
-        rating_data = self._get_data(song_tab_data, 'rating')
-        song_details_map['RATING'] = "{:.2f}".format(float(rating_data))
-        tab_data = self._get_data(song_view_data, 'wiki_tab', 'content')
-        song_details_map['TABS'] = tab_data.replace('[tab]', '').replace('[/tab]', '')
         
         return song_details_map
         
@@ -97,8 +114,8 @@ class UltimateGuitarScraper:
         div_content = str(content.find('html').find('body').find('div', class_='js-store'))
         #Removes starting and ending HTML tags to convert to JSON
         div_content = div_content[36:-8]
-        #Some response content comes back dirty, cleaning
-        div_content = div_content.replace("&quot;", "\"")
+        #Cleans encoded characters and deactivates new line characters
+        div_content = div_content.replace('&quot;', '\"').replace('\\r\\n', '\\\\n')
         
         return json.loads(div_content)['store']['page']['data']
     
@@ -115,13 +132,14 @@ def main():
     parser = argparse.ArgumentParser(description="Web scraper for guitar tabs")
     parser.add_argument("-p", "--pages", type=int, default=1, help="Number of pages to scrape")
     parser.add_argument("-s", "--song", type=str, help="Song URL to scrape")
+    parser.add_argument("-o", "--out", type=str, default=None, help="Output path. Defalts to parent directory output folder.")
     args = parser.parse_args()
     
     scraper = UltimateGuitarScraper()
     if args.song:
-        scraper.scrape_song(args.song)
+        scraper.scrape_song(args.song, args.out)
     else:
-        scraper.scrape_pages(args.pages)
+        scraper.scrape_pages(args.pages, args.out)
 
 if __name__ == '__main__':
     main()

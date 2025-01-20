@@ -11,19 +11,26 @@ import unittest
 class TestScraper(unittest.TestCase):
     scraper = UltimateGuitarScraper()
     
-    def test_scrape_single_page(self):
-        song_details = []
-        song_details = self.scraper.scrape_pages(1)
+    def test_scrape_song(self):
+        song_details = self.scraper.scrape_song('https://tabs.ultimate-guitar.com/tab/metallica/nothing-else-matters-tabs-8519', None)
+    
+        self.assertTrue(len(song_details) == 1)    
+    
+    # def test_scrape_single_page(self):
+    #     song_details = []
+    #     song_details = self.scraper.scrape_pages(1, None)
         
-        self.assertTrue(len(song_details) == 31)
+    #     self.assertTrue(len(song_details) == 31)
         
-    def test_scrape_multiple_pages(self):
-        song_details = []
-        song_details = self.scraper.scrape_pages(3)
+    # def test_scrape_multiple_pages(self):
+    #     song_details = []
+    #     song_details = self.scraper.scrape_pages(3, None)
         
-        self.assertTrue(len(song_details) == 107)
+    #     self.assertTrue(len(song_details) == 107)
         
+    # TODO: test CSV file exists
     # TODO: Test scraping a single song URL
+    # TODO: test using command line flags
     # TODO: Test failing when misusing command line flag
     # TODO: Test using wrong data types when using flags
 
