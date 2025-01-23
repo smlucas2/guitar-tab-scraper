@@ -15,6 +15,8 @@ import shelve
 from pathlib import Path
 from bs4 import BeautifulSoup
 
+# TODO: add ouput folder and cache files to .gitignore, also remove them from git
+# TODO: add logging
 class UltimateGuitarScraper:
     CACHE = 'songcache.db'
     
@@ -50,11 +52,11 @@ class UltimateGuitarScraper:
     def _output_to_csv(self, all_song_details, output_path):
         output_path = self._retrieve_output_path(output_path)
         with open(output_path, 'w', newline='') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=all_song_details[0].keys())
+            writer = csv.DictWriter(csv_file, fieldnames=all_song_details[0][0].keys())
             writer.writeheader()
-            
-            for song_details in all_song_details:
-                writer.writerow(song_details)
+            for page_details in all_song_details:
+                for song_details in page_details:
+                    writer.writerow(song_details)
                 
     def _retrieve_output_path(self, output_path):
         if output_path is None:
@@ -74,21 +76,19 @@ class UltimateGuitarScraper:
         return tab_urls
     
     def _scrape_page_details(self, tab_urls):
-        cached_songs = []
-        with shelve.open(self.CACHE) as db:
-            cached_songs = list(db.keys())
-        
         page_details = []
-        for tab_url in tab_urls:
-            if tab_url in cached_songs:
-                print("Using cached values for song details with URL [" + tab_url + "].")
-            else:
-                song_details = self._scrape_song_details(tab_url)
-                page_details.append(song_details)
-                print("Song details obtained for URL [" + tab_url + "].")
-            
-                #delaying to be respectful to website resources
-                time.sleep(random.uniform(1, 3))
+        with shelve.open(self.CACHE) as cached_songs:
+            for tab_url in tab_urls:
+                if tab_url in cached_songs:
+                    print("Using cached values for song details with URL [" + tab_url + "].")
+                    page_details.append(cached_songs.get(tab_url))
+                else:
+                    song_details = self._scrape_song_details(tab_url)
+                    page_details.append(song_details)
+                    print("Song details obtained for URL [" + tab_url + "].")
+                
+                    #delaying to be respectful to website resources
+                    time.sleep(random.uniform(1, 3))
             
         return page_details
         
@@ -115,7 +115,7 @@ class UltimateGuitarScraper:
         song_details_map['FAVORITES'] = self._get_data(song_view_data, song_url, 'stats', 'favorites_count')
         
         with shelve.open(self.CACHE) as db:
-            db[song_url] = True
+            db[song_url] = song_details_map
         
         return song_details_map
         
@@ -158,10 +158,10 @@ def main():
     args = parser.parse_args()
     
     scraper = UltimateGuitarScraper()
-    if args.clean:
+    if args.clear:
         scraper.clear_cache()
     
-    if args.song:
+    if args.tab:
         scraper.scrape_tab(args.tab, args.out)
     else:
         scraper.scrape_pages(args.pages, args.out)
