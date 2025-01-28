@@ -28,6 +28,7 @@ class TestScraper(unittest.TestCase):
         
     #     self.assertTrue(len(song_details) == 107)
         
+    # TODO: change tests to check output.csv (and delete)
     # TODO: test cache and clearing cache
     # TODO: test CSV file exists
     # TODO: Test scraping a single song URL

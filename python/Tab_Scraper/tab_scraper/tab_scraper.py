@@ -7,6 +7,7 @@ This utility will scrapethe "Ultimate Guitar" website and obtain the tabulations
 
 import requests
 import argparse
+import logging
 import time
 import random
 import json
@@ -16,11 +17,17 @@ import shelve
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-# TODO: add ouput folder and cache files to .gitignore, also remove them from git
+# TODO: change pages to a simple limit and offset (all_song_details will be a simple list as opposed to a list of lists)
 # TODO: add logging
-# TODO: make generic method for creating path to output / songcache / logging
 class UltimateGuitarScraper:
-    CACHE = 'songcache/songcache.db'
+    CACHE_PATH = None
+    
+    def __init__(self):
+        UltimateGuitarScraper.CACHE_PATH = self._build_output_path('songcache/songcache.db')
+        parent_dir = os.path.dirname(UltimateGuitarScraper.CACHE_PATH)
+        os.makedirs(parent_dir, exist_ok=True)
+        # TODO: create logger
+        # TODO: custom output path should go here
     
     def scrape_pages(self, pages, output_path):
         start_time = time.time()
@@ -42,20 +49,17 @@ class UltimateGuitarScraper:
     
     def scrape_tab(self, tab_url, output_path):
         print("Scraping song from Ultimate Guitar at URL [" + tab_url + "].")
-        all_song_details = [self._scrape_song_details(tab_url)]
+        all_song_details = [[self._scrape_song_details(tab_url)]]
         print("Scraping completed.")
         
         self._output_to_csv(all_song_details, output_path)
     
     def clear_cache(self):
-        cache_path = self._retrieve_output_path(None, self.CACHE)
-        parent_dir = os.path.dirname(cache_path)
-        os.makedirs(parent_dir, exist_ok=True)
-        with shelve.open(cache_path) as db:
+        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
             db.clear()
     
     def _output_to_csv(self, all_song_details, output_path):
-        output_path = self._retrieve_output_path(output_path, "output/output.csv")
+        output_path = self._build_output_path('output/output.csv')
         with open(output_path, 'w', newline='') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=all_song_details[0][0].keys())
             writer.writeheader()
@@ -63,12 +67,10 @@ class UltimateGuitarScraper:
                 for song_details in page_details:
                     writer.writerow(song_details)
                 
-    def _retrieve_output_path(self, output_path, end_dir):
-        if output_path is None:
-            current_file = Path(__file__)
-            parent_directory = current_file.parent.parent
-            output_path = parent_directory / end_dir
-        return output_path
+    def _build_output_path(self, path):
+        current_file = Path(__file__)
+        parent_directory = current_file.parent.parent
+        return parent_directory / path
         
     def _scrape_tab_urls(self, page):
         page_url = self._build_explorer_page_url(page)
@@ -82,10 +84,7 @@ class UltimateGuitarScraper:
     
     def _scrape_page_details(self, tab_urls):
         page_details = []
-        cache_path = self._retrieve_output_path(None, self.CACHE)
-        parent_dir = os.path.dirname(cache_path)
-        os.makedirs(parent_dir, exist_ok=True)
-        with shelve.open(cache_path) as cached_songs:
+        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as cached_songs:
             for tab_url in tab_urls:
                 if tab_url in cached_songs:
                     print("Using cached values for song details with URL [" + tab_url + "].")
@@ -122,10 +121,7 @@ class UltimateGuitarScraper:
         song_details_map['VIEWS'] = self._get_data(song_view_data, song_url, 'stats', 'view_total')
         song_details_map['FAVORITES'] = self._get_data(song_view_data, song_url, 'stats', 'favorites_count')
         
-        cache_path = self._retrieve_output_path(None, self.CACHE)
-        parent_dir = os.path.dirname(cache_path)
-        os.makedirs(parent_dir, exist_ok=True)
-        with shelve.open(cache_path) as db:
+        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
             db[song_url] = song_details_map
         
         return song_details_map
@@ -161,21 +157,26 @@ class UltimateGuitarScraper:
             return ''
     
 def main():
+    args = _build_arg_parser()
+    _run_scraper(args)
+        
+def _build_arg_parser():
     parser = argparse.ArgumentParser(description="Web scraper for guitar tabs")
-    parser.add_argument("-p", "--pages", type=int, default=1, help="Number of pages to scrape")
+    parser.add_argument("-l", "--limit", type=int, default=None, help="Limit to amount of songs to scrapes. Defaults to all songs.")
     parser.add_argument("-t", "--tab", type=str, help="Tab URL to scrape")
     parser.add_argument("-o", "--out", type=str, default=None, help="Output path. Defalts to parent directory output folder.")
     parser.add_argument("-c", "--clear", action='store_true', help="Clears the song cache.")
-    args = parser.parse_args()
-    
-    scraper = UltimateGuitarScraper()
+    return parser.parse_args()
+
+def _run_scraper(args):
+    scraper = UltimateGuitarScraper(args)
     if args.clear:
         scraper.clear_cache()
     
     if args.tab:
         scraper.scrape_tab(args.tab, args.out)
     else:
-        scraper.scrape_pages(args.pages, args.out)
+        scraper.scrape_pages(args.limit, args.out)
 
 if __name__ == '__main__':
     main()
