@@ -17,62 +17,77 @@ import shelve
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-# TODO: change pages to a simple limit and offset (all_song_details will be a simple list as opposed to a list of lists)
 # TODO: add logging
+# TODO: update README
+# TODO: update pyproject
+# TODO: update tests
 class UltimateGuitarScraper:
     CACHE_PATH = None
     
-    def __init__(self):
+    def __init__(self, out=None):
         UltimateGuitarScraper.CACHE_PATH = self._build_output_path('songcache/songcache.db')
         parent_dir = os.path.dirname(UltimateGuitarScraper.CACHE_PATH)
         os.makedirs(parent_dir, exist_ok=True)
+        
+        self.output_path = self._validate_output_path(out)
         # TODO: create logger
-        # TODO: custom output path should go here
     
-    def scrape_pages(self, pages, output_path):
+    def _validate_output_path(self, out):
+        if out != None:
+            out_dir = os.path.dirname(out)
+            if os.path.exists(out_dir):
+                return out
+            else:        
+                print(f"Output directory '{out_dir}' does not exist, using default output path.")
+            
+        return self._build_output_path('output/output.csv')
+        
+    def scrape_songs(self):
         start_time = time.time()
         print("Beginning scraping of Ultimate Guitar for tabs.")
         
-        all_song_details = []
-        for page in range(1, pages + 1):
-            print("Scraping page " + str(page) + "...")
-            
-            tab_urls = self._scrape_tab_urls(page)
-            all_song_details.append(self._scrape_page_details(tab_urls))
+        song_details = []
+        
+        try:
+            page = 1
+            while True:
+                urls = self._scrape_urls(page)
+                song_details.extend(self._scrape_page_details(urls))
+                page += 1
+        except:
+            print("End of song list reached.")
                 
         end_time = time.time()
         elapsed_time = int(end_time - start_time)
         print(f"Scraping completed in {elapsed_time}s.")
-        print(f"Extracted details of {str(len(all_song_details))} songs.")
+        print(f"Extracted details of {str(len(song_details))} songs.")
         
-        self._output_to_csv(all_song_details, output_path)
+        self._output_to_csv(song_details)
     
-    def scrape_tab(self, tab_url, output_path):
-        print("Scraping song from Ultimate Guitar at URL [" + tab_url + "].")
-        all_song_details = [[self._scrape_song_details(tab_url)]]
+    def scrape_url(self, url):
+        print("Scraping song from Ultimate Guitar at URL [" + url + "].")
+        song_details = [self._scrape_song_details(url)]
         print("Scraping completed.")
         
-        self._output_to_csv(all_song_details, output_path)
+        self._output_to_csv(song_details)
     
     def clear_cache(self):
         with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
             db.clear()
     
-    def _output_to_csv(self, all_song_details, output_path):
-        output_path = self._build_output_path('output/output.csv')
-        with open(output_path, 'w', newline='') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=all_song_details[0][0].keys())
+    def _output_to_csv(self, song_details):
+        with open(self.output_path, 'w', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
             writer.writeheader()
-            for page_details in all_song_details:
-                for song_details in page_details:
-                    writer.writerow(song_details)
+            for details in song_details:
+                writer.writerow(details)
                 
     def _build_output_path(self, path):
         current_file = Path(__file__)
         parent_directory = current_file.parent.parent
         return parent_directory / path
         
-    def _scrape_tab_urls(self, page):
+    def _scrape_urls(self, page):
         page_url = self._build_explorer_page_url(page)
         explorer_dict = self._request_site_data_json(page_url)['data']['tabs']
         
@@ -82,47 +97,47 @@ class UltimateGuitarScraper:
             
         return tab_urls
     
-    def _scrape_page_details(self, tab_urls):
+    def _scrape_page_details(self, urls):
         page_details = []
         with shelve.open(UltimateGuitarScraper.CACHE_PATH) as cached_songs:
-            for tab_url in tab_urls:
-                if tab_url in cached_songs:
-                    print("Using cached values for song details with URL [" + tab_url + "].")
-                    page_details.append(cached_songs.get(tab_url))
+            for url in urls:
+                if url in cached_songs:
+                    print("Using cached values for song details with URL [" + url + "].")
+                    page_details.append(cached_songs.get(url))
                 else:
-                    song_details = self._scrape_song_details(tab_url)
+                    song_details = self._scrape_song_details(url)
                     page_details.append(song_details)
-                    print("Song details obtained for URL [" + tab_url + "].")
+                    print("Song details obtained for URL [" + url + "].")
                 
                     #delaying to be respectful to website resources
                     time.sleep(random.uniform(1, 3))
             
         return page_details
         
-    def _scrape_song_details(self, song_url):
-        song_data = self._request_site_data_json(song_url)
+    def _scrape_song_details(self, url):
+        song_data = self._request_site_data_json(url)
         song_tab_data = song_data['tab']
         song_view_data = song_data['tab_view']
         
-        song_details_map = {'ID': self._get_data(song_tab_data, song_url, 'id')}
-        song_details_map['SONG_ID'] = self._get_data(song_tab_data, song_url, 'song_id')
-        song_details_map['ARTIST_ID'] = self._get_data(song_tab_data, song_url, 'artist_id')
-        tab_data = self._get_data(song_view_data, song_url, 'wiki_tab', 'content')
+        song_details_map = {'ID': self._get_data(song_tab_data, url, 'id')}
+        song_details_map['SONG_ID'] = self._get_data(song_tab_data, url, 'song_id')
+        song_details_map['ARTIST_ID'] = self._get_data(song_tab_data, url, 'artist_id')
+        tab_data = self._get_data(song_view_data, url, 'wiki_tab', 'content')
         song_details_map['TABS'] = tab_data.replace('[tab]', '').replace('[/tab]', '')
-        song_details_map['SONG_NAME'] = self._get_data(song_tab_data, song_url, 'song_name')
-        song_details_map['ARTIST_NAME'] = self._get_data(song_tab_data, song_url, 'artist_name')
-        song_details_map['URL'] = song_url
-        song_details_map['DIFFICULTY'] = self._get_data(song_tab_data, song_url, 'difficulty')
-        song_details_map['TUNING'] = self._get_data(song_view_data, song_url, 'meta', 'tuning', 'value')
-        song_details_map['KEY'] = self._get_data(song_view_data, song_url, 'meta', 'tonality')
-        rating_data = self._get_data(song_tab_data, song_url, 'rating')
+        song_details_map['SONG_NAME'] = self._get_data(song_tab_data, url, 'song_name')
+        song_details_map['ARTIST_NAME'] = self._get_data(song_tab_data, url, 'artist_name')
+        song_details_map['URL'] = url
+        song_details_map['DIFFICULTY'] = self._get_data(song_tab_data, url, 'difficulty')
+        song_details_map['TUNING'] = self._get_data(song_view_data, url, 'meta', 'tuning', 'value')
+        song_details_map['KEY'] = self._get_data(song_view_data, url, 'meta', 'tonality')
+        rating_data = self._get_data(song_tab_data, url, 'rating')
         song_details_map['RATING'] = "{:.2f}".format(float(rating_data))
-        song_details_map['VOTES'] = self._get_data(song_tab_data, song_url, 'votes')
-        song_details_map['VIEWS'] = self._get_data(song_view_data, song_url, 'stats', 'view_total')
-        song_details_map['FAVORITES'] = self._get_data(song_view_data, song_url, 'stats', 'favorites_count')
+        song_details_map['VOTES'] = self._get_data(song_tab_data, url, 'votes')
+        song_details_map['VIEWS'] = self._get_data(song_view_data, url, 'stats', 'view_total')
+        song_details_map['FAVORITES'] = self._get_data(song_view_data, url, 'stats', 'favorites_count')
         
         with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
-            db[song_url] = song_details_map
+            db[url] = song_details_map
         
         return song_details_map
         
@@ -162,21 +177,20 @@ def main():
         
 def _build_arg_parser():
     parser = argparse.ArgumentParser(description="Web scraper for guitar tabs")
-    parser.add_argument("-l", "--limit", type=int, default=None, help="Limit to amount of songs to scrapes. Defaults to all songs.")
-    parser.add_argument("-t", "--tab", type=str, help="Tab URL to scrape")
+    parser.add_argument("-u", "--url", type=str, help="URL to scrape")
     parser.add_argument("-o", "--out", type=str, default=None, help="Output path. Defalts to parent directory output folder.")
     parser.add_argument("-c", "--clear", action='store_true', help="Clears the song cache.")
     return parser.parse_args()
 
 def _run_scraper(args):
-    scraper = UltimateGuitarScraper(args)
+    scraper = UltimateGuitarScraper(args.out)
     if args.clear:
         scraper.clear_cache()
     
     if args.tab:
-        scraper.scrape_tab(args.tab, args.out)
+        scraper.scrape_url(args.url)
     else:
-        scraper.scrape_pages(args.limit, args.out)
+        scraper.scrape_songs()
 
 if __name__ == '__main__':
     main()

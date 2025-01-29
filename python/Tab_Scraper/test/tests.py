@@ -11,27 +11,21 @@ import unittest
 class TestScraper(unittest.TestCase):
     scraper = UltimateGuitarScraper()
     
-    # def test_scrape_song(self):
-    #     song_details = self.scraper.scrape_tab('https://tabs.ultimate-guitar.com/tab/metallica/nothing-else-matters-tabs-8519', None)
+    def test_scrape_song(self):
+        # TODO: use requests_mock library to make a mock site to scrape so this break if url is changed
+        self.scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/metallica/nothing-else-matters-tabs-8519')
+        # TODO: validate output
+        # TODO: delete output
     
-    #     self.assertTrue(len(song_details) == 1)    
-    
-    def test_scrape_single_page(self):
-        song_details = []
-        song_details = self.scraper.scrape_pages(1, None)
+    def test_scrape_songs(self):
+        # TODO: use requests_mock library to make a mock site to scrape so this doesnt take forever
+        self.scraper.scrape_songs()
+        # TODO: validate output
+        # TODO: delete output
         
-        self.assertTrue(len(song_details) == 31)
-        
-    # def test_scrape_multiple_pages(self):
-    #     song_details = []
-    #     song_details = self.scraper.scrape_pages(3, None)
-        
-    #     self.assertTrue(len(song_details) == 107)
-        
-    # TODO: change tests to check output.csv (and delete)
     # TODO: test cache and clearing cache
+    # TODO: test custom output path
     # TODO: test CSV file exists
-    # TODO: Test scraping a single song URL
     # TODO: test using command line flags
     # TODO: Test failing when misusing command line flag
     # TODO: Test using wrong data types when using flags
