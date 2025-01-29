@@ -11,6 +11,7 @@ import logging
 import os
 import random
 import time
+from typing import Optional, List, Dict, Union
 from pathlib import Path
 
 import requests
@@ -18,18 +19,27 @@ from bs4 import BeautifulSoup
 
 from tab_scraper.util.song_cache import SongCache
 
+NestedDict = Dict[str, Union[str, "NestedDict"]]
+
 # TODO: add logger class with logging
 # TODO: update README
 # TODO: update pyproject
 # TODO: update tests
+# TODO: add docs to all public methods
 class UltimateGuitarScraper:
     
-    def __init__(self, out_path=None, cache_path=None):
+    def __init__(
+            self, 
+            out_path: Optional[str] = None, 
+            cache_path: Optional[str] = None, 
+            log_path: Optional[str] = None
+        ) -> None:
+        
         self.song_cache = SongCache(cache_path)
         self.output_path = self._validate_output_path(out_path)
         # TODO: create logger
         
-    def scrape_songs(self):
+    def scrape_songs(self) -> None:
         start_time = time.time()
         print("Beginning scraping of Ultimate Guitar for tabs.")
         
@@ -51,17 +61,17 @@ class UltimateGuitarScraper:
         
         self._output_to_csv(song_details)
     
-    def scrape_url(self, url):
+    def scrape_url(self, url: str) -> None:
         print("Scraping song from Ultimate Guitar at URL [" + url + "].")
         song_details = [self._scrape_song_details(url)]
         print("Scraping completed.")
         
         self._output_to_csv(song_details)
     
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         self.song_cache.clear_cache()
         
-    def _scrape_urls(self, page):
+    def _scrape_urls(self, page: int) -> None:
         page_url = self._build_explorer_page_url(page)
         explorer_dict = self._request_site_data_json(page_url)['data']['tabs']
         
@@ -71,7 +81,7 @@ class UltimateGuitarScraper:
             
         return tab_urls
     
-    def _scrape_page_details(self, urls):
+    def _scrape_page_details(self, urls: List[str]) -> List[Dict[str, str]]:
         cached_songs = self.song_cache.get_cached_songs()
         
         page_details = []
@@ -89,57 +99,58 @@ class UltimateGuitarScraper:
             
         return page_details
         
-    def _scrape_song_details(self, url):
+    def _scrape_song_details(self, url: str) -> Dict[str, str]:
         song_data = self._request_site_data_json(url)
         song_tab_data = song_data['tab']
         song_view_data = song_data['tab_view']
         
-        song_details_map = {'ID': self._get_data(song_tab_data, url, 'id')}
-        song_details_map['SONG_ID'] = self._get_data(song_tab_data, url, 'song_id')
-        song_details_map['ARTIST_ID'] = self._get_data(song_tab_data, url, 'artist_id')
-        tab_data = self._get_data(song_view_data, url, 'wiki_tab', 'content')
+        song_details_map = {'ID': self._get_value(song_tab_data, url, 'id')}
+        song_details_map['SONG_ID'] = self._get_value(song_tab_data, url, 'song_id')
+        song_details_map['ARTIST_ID'] = self._get_value(song_tab_data, url, 'artist_id')
+        tab_data = self._get_value(song_view_data, url, 'wiki_tab', 'content')
         song_details_map['TABS'] = tab_data.replace('[tab]', '').replace('[/tab]', '')
-        song_details_map['SONG_NAME'] = self._get_data(song_tab_data, url, 'song_name')
-        song_details_map['ARTIST_NAME'] = self._get_data(song_tab_data, url, 'artist_name')
+        song_details_map['SONG_NAME'] = self._get_value(song_tab_data, url, 'song_name')
+        song_details_map['ARTIST_NAME'] = self._get_value(song_tab_data, url, 'artist_name')
         song_details_map['URL'] = url
-        song_details_map['DIFFICULTY'] = self._get_data(song_tab_data, url, 'difficulty')
-        song_details_map['TUNING'] = self._get_data(song_view_data, url, 'meta', 'tuning', 'value')
-        song_details_map['KEY'] = self._get_data(song_view_data, url, 'meta', 'tonality')
-        rating_data = self._get_data(song_tab_data, url, 'rating')
+        song_details_map['DIFFICULTY'] = self._get_value(song_tab_data, url, 'difficulty')
+        song_details_map['TUNING'] = self._get_value(song_view_data, url, 'meta', 'tuning', 'value')
+        song_details_map['KEY'] = self._get_value(song_view_data, url, 'meta', 'tonality')
+        rating_data = self._get_value(song_tab_data, url, 'rating')
         song_details_map['RATING'] = "{:.2f}".format(float(rating_data))
-        song_details_map['VOTES'] = self._get_data(song_tab_data, url, 'votes')
-        song_details_map['VIEWS'] = self._get_data(song_view_data, url, 'stats', 'view_total')
-        song_details_map['FAVORITES'] = self._get_data(song_view_data, url, 'stats', 'favorites_count')
+        song_details_map['VOTES'] = self._get_value(song_tab_data, url, 'votes')
+        song_details_map['VIEWS'] = self._get_value(song_view_data, url, 'stats', 'view_total')
+        song_details_map['FAVORITES'] = self._get_value(song_view_data, url, 'stats', 'favorites_count')
         
         self.song_cache.cache_song(url, song_details_map)
         
         return song_details_map
     
-    def _output_to_csv(self, song_details):
+    def _output_to_csv(self, song_details: List[Dict[str, str]]) -> None:
         with open(self.output_path, 'w', newline='') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
             writer.writeheader()
             for details in song_details:
                 writer.writerow(details)
                 
-    def _build_output_path(self, path):
+    def _build_output_path(self, path: str) -> str:
         current_file = Path(__file__)
         parent_directory = current_file.parent.parent
         return parent_directory / path
         
-    def _build_explorer_page_url(self, page):
+    def _build_explorer_page_url(self, page: int) -> str:
         if page == 1:
             return 'https://www.ultimate-guitar.com/explore?type[]=Tabs'
         return 'https://www.ultimate-guitar.com/explore?type[]=Tabs&page=' + str(page)
     
-    def _request_site_data_json(self, song_url):
+    def _request_site_data_json(self, song_url: str) -> NestedDict:
         response = requests.get(song_url)
         content = BeautifulSoup(response.content, 'html.parser')
         clean_content = self._clean_content(content)
+        json_content = json.loads(clean_content)['store']['page']['data']
         
-        return json.loads(clean_content)['store']['page']['data']
+        return json_content
     
-    def _clean_content(self, content):
+    def _clean_content(self, content: BeautifulSoup) -> str:
         div_content = str(content.find('html').find('body').find('div', class_='js-store'))
         #Removes starting and ending HTML tags to convert to JSON
         div_content = div_content[36:-8]
@@ -148,16 +159,16 @@ class UltimateGuitarScraper:
         
         return div_content
     
-    def _get_data(self, json, song_url, *keys):
+    def _get_value(self, json: NestedDict, song_url: str, *keys: str) -> str:
         try:
             for key in keys:
-                json = json[key]
-            return json
+                value = json[key]
+            return value
         except:
             print("Failed to find [" + key + "] value for song at URL [" + song_url + "].")
             return ''
         
-    def _validate_output_path(self, out):
+    def _validate_output_path(self, out: str) -> str:
         if out != None:
             out_dir = os.path.dirname(out)
             if os.path.exists(out_dir):
