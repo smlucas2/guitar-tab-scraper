@@ -5,42 +5,29 @@ Tab Scraper
 This utility will scrapethe "Ultimate Guitar" website and obtain the tabulations.
 """
 
-import requests
-import argparse
-import logging
-import time
-import random
-import json
 import csv
+import json
+import logging
 import os
-import shelve
+import random
+import time
 from pathlib import Path
+
+import requests
 from bs4 import BeautifulSoup
 
-# TODO: add logging
+from tab_scraper.util.song_cache import SongCache
+
+# TODO: add logger class with logging
 # TODO: update README
 # TODO: update pyproject
 # TODO: update tests
 class UltimateGuitarScraper:
-    CACHE_PATH = None
     
-    def __init__(self, out=None):
-        UltimateGuitarScraper.CACHE_PATH = self._build_output_path('songcache/songcache.db')
-        parent_dir = os.path.dirname(UltimateGuitarScraper.CACHE_PATH)
-        os.makedirs(parent_dir, exist_ok=True)
-        
-        self.output_path = self._validate_output_path(out)
+    def __init__(self, out_path=None, cache_path=None):
+        self.song_cache = SongCache(cache_path)
+        self.output_path = self._validate_output_path(out_path)
         # TODO: create logger
-    
-    def _validate_output_path(self, out):
-        if out != None:
-            out_dir = os.path.dirname(out)
-            if os.path.exists(out_dir):
-                return out
-            else:        
-                print(f"Output directory '{out_dir}' does not exist, using default output path.")
-            
-        return self._build_output_path('output/output.csv')
         
     def scrape_songs(self):
         start_time = time.time()
@@ -72,20 +59,7 @@ class UltimateGuitarScraper:
         self._output_to_csv(song_details)
     
     def clear_cache(self):
-        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
-            db.clear()
-    
-    def _output_to_csv(self, song_details):
-        with open(self.output_path, 'w', newline='') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
-            writer.writeheader()
-            for details in song_details:
-                writer.writerow(details)
-                
-    def _build_output_path(self, path):
-        current_file = Path(__file__)
-        parent_directory = current_file.parent.parent
-        return parent_directory / path
+        self.song_cache.clear_cache()
         
     def _scrape_urls(self, page):
         page_url = self._build_explorer_page_url(page)
@@ -98,19 +72,20 @@ class UltimateGuitarScraper:
         return tab_urls
     
     def _scrape_page_details(self, urls):
+        cached_songs = self.song_cache.get_cached_songs()
+        
         page_details = []
-        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as cached_songs:
-            for url in urls:
-                if url in cached_songs:
-                    print("Using cached values for song details with URL [" + url + "].")
-                    page_details.append(cached_songs.get(url))
-                else:
-                    song_details = self._scrape_song_details(url)
-                    page_details.append(song_details)
-                    print("Song details obtained for URL [" + url + "].")
-                
-                    #delaying to be respectful to website resources
-                    time.sleep(random.uniform(1, 3))
+        for url in urls:
+            if url in cached_songs:
+                print("Using cached values for song details with URL [" + url + "].")
+                page_details.append(cached_songs.get(url))
+            else:
+                song_details = self._scrape_song_details(url)
+                page_details.append(song_details)
+                print("Song details obtained for URL [" + url + "].")
+            
+                # Delaying to be respectful to website resources
+                time.sleep(random.uniform(1, 3))
             
         return page_details
         
@@ -136,10 +111,21 @@ class UltimateGuitarScraper:
         song_details_map['VIEWS'] = self._get_data(song_view_data, url, 'stats', 'view_total')
         song_details_map['FAVORITES'] = self._get_data(song_view_data, url, 'stats', 'favorites_count')
         
-        with shelve.open(UltimateGuitarScraper.CACHE_PATH) as db:
-            db[url] = song_details_map
+        self.song_cache.cache_song(url, song_details_map)
         
         return song_details_map
+    
+    def _output_to_csv(self, song_details):
+        with open(self.output_path, 'w', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
+            writer.writeheader()
+            for details in song_details:
+                writer.writerow(details)
+                
+    def _build_output_path(self, path):
+        current_file = Path(__file__)
+        parent_directory = current_file.parent.parent
+        return parent_directory / path
         
     def _build_explorer_page_url(self, page):
         if page == 1:
@@ -170,27 +156,13 @@ class UltimateGuitarScraper:
         except:
             print("Failed to find [" + key + "] value for song at URL [" + song_url + "].")
             return ''
-    
-def main():
-    args = _build_arg_parser()
-    _run_scraper(args)
         
-def _build_arg_parser():
-    parser = argparse.ArgumentParser(description="Web scraper for guitar tabs")
-    parser.add_argument("-u", "--url", type=str, help="URL to scrape")
-    parser.add_argument("-o", "--out", type=str, default=None, help="Output path. Defalts to parent directory output folder.")
-    parser.add_argument("-c", "--clear", action='store_true', help="Clears the song cache.")
-    return parser.parse_args()
-
-def _run_scraper(args):
-    scraper = UltimateGuitarScraper(args.out)
-    if args.clear:
-        scraper.clear_cache()
-    
-    if args.tab:
-        scraper.scrape_url(args.url)
-    else:
-        scraper.scrape_songs()
-
-if __name__ == '__main__':
-    main()
+    def _validate_output_path(self, out):
+        if out != None:
+            out_dir = os.path.dirname(out)
+            if os.path.exists(out_dir):
+                return out
+            else:        
+                print(f"Output directory '{out_dir}' does not exist, using default output path.")
+            
+        return self._build_output_path('output/output.csv')

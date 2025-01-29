@@ -5,12 +5,14 @@ Created on Wed Jan 15 12:55:01 2025
 @author: Sean
 """
 
-from tab_scraper.tab_scraper import UltimateGuitarScraper
-from util.mock_site_builder import create_mock_site
-from unittest.mock import patch
-import requests_mock
-import requests
 import unittest
+from unittest.mock import patch
+
+import requests
+import requests_mock
+
+from util.mock_site_builder import create_mock_site
+from tab_scraper.tab_scraper import UltimateGuitarScraper
 
 # TODO: for each test, validate output, delete output, delete cache
 # TODO: test cache and clearing cache
@@ -26,7 +28,6 @@ class TestScraper(unittest.TestCase):
     def setUpClass(cls):
         cls.mock_adapter = requests_mock.Adapter()
         cls.session = requests.Session()
-        cls.session.mount('http://', cls.mock_adapter)
         cls.session.mount('https://', cls.mock_adapter)
         
         create_mock_site(cls.mock_adapter)
