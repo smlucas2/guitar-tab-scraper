@@ -32,8 +32,8 @@ class UltimateGuitarScraper:
             log_dir: Optional[str] = None
         ) -> None:
         
-        self.cacher = SongCacher(cache_dir)
         self.outputer = SongDetailsOutputer(out_dir)
+        self.cacher = SongCacher(cache_dir)
         # TODO: create logger
         
     def scrape_songs(self) -> None:
@@ -101,22 +101,22 @@ class UltimateGuitarScraper:
         song_tab_data = song_data['tab']
         song_view_data = song_data['tab_view']
         
-        song_details_map = {'ID': self._get_value(song_tab_data, url, 'id')}
-        song_details_map['SONG_ID'] = self._get_value(song_tab_data, url, 'song_id')
-        song_details_map['ARTIST_ID'] = self._get_value(song_tab_data, url, 'artist_id')
-        tab_data = self._get_value(song_view_data, url, 'wiki_tab', 'content')
+        song_details_map = {'ID': self._get_nested_value(url, song_tab_data, 'id')}
+        song_details_map['SONG_ID'] = self._get_nested_value(url, song_tab_data, 'song_id')
+        song_details_map['ARTIST_ID'] = self._get_nested_value(url, song_tab_data, 'artist_id')
+        tab_data = self._get_nested_value(url, song_view_data, 'wiki_tab', 'content')
         song_details_map['TABS'] = tab_data.replace('[tab]', '').replace('[/tab]', '')
-        song_details_map['SONG_NAME'] = self._get_value(song_tab_data, url, 'song_name')
-        song_details_map['ARTIST_NAME'] = self._get_value(song_tab_data, url, 'artist_name')
+        song_details_map['SONG_NAME'] = self._get_nested_value(url, song_tab_data, 'song_name')
+        song_details_map['ARTIST_NAME'] = self._get_nested_value(url, song_tab_data, 'artist_name')
         song_details_map['URL'] = url
-        song_details_map['DIFFICULTY'] = self._get_value(song_tab_data, url, 'difficulty')
-        song_details_map['TUNING'] = self._get_value(song_view_data, url, 'meta', 'tuning', 'value')
-        song_details_map['KEY'] = self._get_value(song_view_data, url, 'meta', 'tonality')
-        rating_data = self._get_value(song_tab_data, url, 'rating')
+        song_details_map['DIFFICULTY'] = self._get_nested_value(url, song_tab_data, 'difficulty')
+        song_details_map['TUNING'] = self._get_nested_value(url, song_view_data, 'meta', 'tuning', 'value')
+        song_details_map['KEY'] = self._get_nested_value(url, song_view_data, 'meta', 'tonality')
+        rating_data = self._get_nested_value(url, song_tab_data, 'rating')
         song_details_map['RATING'] = "{:.2f}".format(float(rating_data))
-        song_details_map['VOTES'] = self._get_value(song_tab_data, url, 'votes')
-        song_details_map['VIEWS'] = self._get_value(song_view_data, url, 'stats', 'view_total')
-        song_details_map['FAVORITES'] = self._get_value(song_view_data, url, 'stats', 'favorites_count')
+        song_details_map['VOTES'] = self._get_nested_value(url, song_tab_data, 'votes')
+        song_details_map['VIEWS'] = self._get_nested_value(url, song_view_data, 'stats', 'view_total')
+        song_details_map['FAVORITES'] = self._get_nested_value(url, song_view_data, 'stats', 'favorites_count')
         
         self.cacher.cache_song(url, song_details_map)
         
@@ -149,7 +149,7 @@ class UltimateGuitarScraper:
         
         return div_content
     
-    def _get_value(self, json: NestedDict, song_url: str, *keys: str) -> str:
+    def _get_nested_value(self, song_url: str, json: NestedDict, *keys: str) -> str:
         try:
             for key in keys:
                 json = json[key]

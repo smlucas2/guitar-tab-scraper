@@ -110,10 +110,10 @@ class TestScraper(unittest.TestCase):
         with patch('requests.get', self.session.get):
             scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/band1/song1')
             
-        cached_songs = scraper.song_cache.get_cached_songs()
+        cached_songs = scraper.cacher.get_cached_songs()
         self.assertEqual(len(cached_songs), 1)
         scraper.clear_cache()
-        cached_songs = scraper.song_cache.get_cached_songs()
+        cached_songs = scraper.cacher.get_cached_songs()
         self.assertEqual(len(cached_songs), 0)
         
     def _validate_output_rows(self, row_to_data):

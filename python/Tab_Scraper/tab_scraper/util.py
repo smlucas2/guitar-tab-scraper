@@ -8,20 +8,19 @@ from pathlib import Path
 
 class SongFileWriter:
     
-    def resolve_directory_path(self, path: str, default_folder: str) -> Path:
-        if path is None:
+    def resolve_directory_path(self, custom_dir: str, default_dir: str) -> Path:
+        if custom_dir is None:
             current_script_dir = Path(__file__).resolve().parent
     
-            target_directory = current_script_dir.parent
-            default_dir = target_directory / default_folder
-            default_dir.mkdir(parents=True, exist_ok=True)
-            return default_dir
+            target_dir = current_script_dir.parent / default_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            return target_dir
         else:
-            custom_path = Path(path)
-            self._validate_directory(custom_path)
+            target_dir = Path(custom_dir)
+            self._validate_directory(target_dir)
             
-            custom_path.mkdir(parents=True, exist_ok=True)
-            return custom_path
+            target_dir.mkdir(parents=True, exist_ok=True)
+            return target_dir
             
     def _validate_directory(self, directory: Path):
         if not directory.exists():
@@ -36,11 +35,11 @@ class SongFileWriter:
             
 class SongDetailsOutputer(SongFileWriter):
     
-    def __init__(self, out_path: str) -> None:
-        self.out_path = self.resolve_directory_path(out_path, "output") / "songdetails.csv"
+    def __init__(self, out_dir: str) -> None:
+        self.out_dir = self.resolve_directory_path(out_dir, "output") / "songdetails.csv"
         
     def output(self, song_details: List[Dict[str, str]]) -> None:
-        with open(self.out_path, 'w', newline='') as csv_file:
+        with open(self.out_dir, 'w', newline='') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
             writer.writeheader()
             for details in song_details:
@@ -48,17 +47,17 @@ class SongDetailsOutputer(SongFileWriter):
 
 class SongCacher(SongFileWriter):
     
-    def __init__(self, cache_path: str) -> None:
-        self.cache_path = self.resolve_directory_path(cache_path, "songcache") / "songcache.db"
+    def __init__(self, cache_dir: str) -> None:
+        self.cache_dir = self.resolve_directory_path(cache_dir, "songcache") / "songcache.db"
         
     def cache_song(self, url: str, song_details: Dict[str, str]) -> None:
-        with shelve.open(self.cache_path) as cache:
+        with shelve.open(self.cache_dir) as cache:
             cache[url] = song_details
             
     def get_cached_songs(self) -> Dict[str, Dict[str, str]]:
-        with shelve.open(self.cache_path) as cache:
+        with shelve.open(self.cache_dir) as cache:
             return dict(cache)
     
     def clear_cache(self) -> None:
-        with shelve.open(self.cache_path) as cache:
+        with shelve.open(self.cache_dir) as cache:
             cache.clear()
