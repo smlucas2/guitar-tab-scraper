@@ -5,19 +5,15 @@ Tab Scraper
 This utility will scrapethe "Ultimate Guitar" website and obtain the tabulations.
 """
 
-import csv
 import json
-import logging
-import os
 import random
 import time
 from typing import Optional, List, Dict, Union
-from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
 
-from tab_scraper.util.song_cache import SongCache
+from tab_scraper.util import SongCacher, SongDetailsOutputer
 
 NestedDict = Dict[str, Union[str, "NestedDict"]]
 
@@ -35,8 +31,8 @@ class UltimateGuitarScraper:
             log_path: Optional[str] = None
         ) -> None:
         
-        self.song_cache = SongCache(cache_path)
-        self.output_path = self._validate_output_path(out_path)
+        self.song_cache = SongCacher(cache_path)
+        self.outputer = SongDetailsOutputer(out_path)
         # TODO: create logger
         
     def scrape_songs(self) -> None:
@@ -59,14 +55,14 @@ class UltimateGuitarScraper:
         print(f"Scraping completed in {elapsed_time}s.")
         print(f"Extracted details of {str(len(song_details))} songs.")
         
-        self._output_to_csv(song_details)
+        self.outputer.output(song_details)
     
     def scrape_url(self, url: str) -> None:
         print("Scraping song from Ultimate Guitar at URL [" + url + "].")
         song_details = [self._scrape_song_details(url)]
         print("Scraping completed.")
         
-        self._output_to_csv(song_details)
+        self.outputer.output(song_details)
     
     def clear_cache(self) -> None:
         self.song_cache.clear_cache()
@@ -124,18 +120,6 @@ class UltimateGuitarScraper:
         self.song_cache.cache_song(url, song_details_map)
         
         return song_details_map
-    
-    def _output_to_csv(self, song_details: List[Dict[str, str]]) -> None:
-        with open(self.output_path, 'w', newline='') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=song_details[0].keys())
-            writer.writeheader()
-            for details in song_details:
-                writer.writerow(details)
-                
-    def _build_output_path(self, path: str) -> str:
-        current_file = Path(__file__)
-        parent_directory = current_file.parent.parent
-        return parent_directory / path
         
     def _build_explorer_page_url(self, page: int) -> str:
         if page == 1:
@@ -167,13 +151,3 @@ class UltimateGuitarScraper:
         except:
             print("Failed to find [" + key + "] value for song at URL [" + song_url + "].")
             return ''
-        
-    def _validate_output_path(self, out: str) -> str:
-        if out != None:
-            out_dir = os.path.dirname(out)
-            if os.path.exists(out_dir):
-                return out
-            else:        
-                print(f"Output directory '{out_dir}' does not exist, using default output path.")
-            
-        return self._build_output_path('output/output.csv')

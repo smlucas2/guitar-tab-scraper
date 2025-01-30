@@ -5,6 +5,7 @@ Created on Wed Jan 15 12:55:01 2025
 @author: Sean
 """
 
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -41,6 +42,11 @@ class TestScraper(unittest.TestCase):
         scraper = UltimateGuitarScraper()
         with patch('requests.get', self.session.get):
             scraper.scrape_songs()
+
+def _build_output_path(self, path: str) -> str:
+    current_file = Path(__file__)
+    parent_directory = current_file.parent.parent
+    return parent_directory / 'output/output.csv'
 
 if __name__ == '__main__':
     unittest.main()
