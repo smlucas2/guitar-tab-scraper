@@ -9,6 +9,7 @@ import os
 import json
 from urllib.parse import urljoin
 from requests_mock import Adapter
+from typing import Dict
 
 EXPLORER_URL = "https://www.ultimate-guitar.com/"
 TABS_URL = "https://tabs.ultimate-guitar.com/tab/"

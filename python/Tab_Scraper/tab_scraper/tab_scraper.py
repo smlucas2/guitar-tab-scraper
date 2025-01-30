@@ -162,8 +162,8 @@ class UltimateGuitarScraper:
     def _get_value(self, json: NestedDict, song_url: str, *keys: str) -> str:
         try:
             for key in keys:
-                value = json[key]
-            return value
+                json = json[key]
+            return json
         except:
             print("Failed to find [" + key + "] value for song at URL [" + song_url + "].")
             return ''
