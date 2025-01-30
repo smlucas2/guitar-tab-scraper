@@ -17,14 +17,8 @@ import csv
 from util.mock_site_builder import create_mock_site
 from tab_scraper.tab_scraper import UltimateGuitarScraper
 
-# TODO: for each test, run as script with appropriate flag and validate output
-# TODO: test caching works
-# TODO: test clearing cache with flag
-# TODO: test custom output path with flag
-# TODO: test custom cache path with flag
-# TODO: test custom logs path with flag
-# TODO: Test failing when misusing command line flag
-# TODO: Test using wrong data types when using flags
+# TODO: test custom logs path works
+# TODO: Test bad custom log path
 class TestScraper(unittest.TestCase):
     
     @classmethod
@@ -35,6 +29,18 @@ class TestScraper(unittest.TestCase):
         cls.session.mount('https://', cls.mock_adapter)
         
         create_mock_site(cls.mock_adapter)
+        
+    def tearDown(self):
+        self._delete_directory('output')
+        self._delete_directory('songcache')
+        
+    def test_scrape_songs(self):
+        scraper = UltimateGuitarScraper()
+        with patch('requests.get', self.session.get):
+            scraper.scrape_songs()
+                    
+        row_to_data = {1: ['0001', '125000'], 4: ['0004', '8000']}
+        self._validate_output_rows(row_to_data)
     
     def test_scrape_song(self):
         scraper = UltimateGuitarScraper()
@@ -43,16 +49,72 @@ class TestScraper(unittest.TestCase):
             
         row_to_data = {1: ['0001', '125000']}
         self._validate_output_rows(row_to_data)
-        self._clean_up()
-    
-    def test_scrape_songs(self):
+
+    def test_scrape_song_bad_url(self):
+        scraper = UltimateGuitarScraper()
+        with self.assertRaises(SystemExit) as cm:
+            with patch('requests.get', self.session.get):
+                scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/wrong/wrong')
+            
+        self.assertEqual(cm.exception.code, 1)
+        
+    def test_custom_output_path(self):
+        out_path = './testoutput'
+        scraper = UltimateGuitarScraper(out_dir=out_path)
+        with patch('requests.get', self.session.get):
+            scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/band1/song1')
+            
+        self._check_and_delete_file(out_path + '/songdetails.csv')
+
+    def test_bad_custom_output(self):
+        with self.assertRaises(SystemExit) as cm:
+            out_path = './parent1/parent2/parent3'
+            UltimateGuitarScraper(out_dir=out_path)
+            
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_bad_custom_output_chars(self):
+        with self.assertRaises(SystemExit) as cm:
+            out_path = 'sadsad??['
+            UltimateGuitarScraper(out_dir=out_path)
+            
+        self.assertEqual(cm.exception.code, 1)
+        
+    def test_custom_cache_path(self):
+        cache_path = './testcache'
+        scraper = UltimateGuitarScraper(cache_dir=cache_path)
+        with patch('requests.get', self.session.get):
+            scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/band1/song1')
+            
+        self._check_and_delete_file(cache_path + '/songcache.db.bak')
+
+    def test_bad_custom_cache(self):
+        with self.assertRaises(SystemExit) as cm:
+            cache_path = './parent1/parent2/parent3'
+            UltimateGuitarScraper(cache_dir=cache_path)
+            
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_bad_custom_cache_chars(self):
+        with self.assertRaises(SystemExit) as cm:
+            cache_path = '<>asdf44'
+            UltimateGuitarScraper(cache_dir=cache_path)
+            
+        self.assertEqual(cm.exception.code, 1)
+        
+    # def test_custom_logs_path(self):
+    #     None
+        
+    def test_clear_cache(self):
         scraper = UltimateGuitarScraper()
         with patch('requests.get', self.session.get):
-            scraper.scrape_songs()
-                    
-        row_to_data = {1: ['0001', '125000'], 4: ['0004', '8000']}
-        self._validate_output_rows(row_to_data)
-        self._clean_up()
+            scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/band1/song1')
+            
+        cached_songs = scraper.song_cache.get_cached_songs()
+        self.assertEqual(len(cached_songs), 1)
+        scraper.clear_cache()
+        cached_songs = scraper.song_cache.get_cached_songs()
+        self.assertEqual(len(cached_songs), 0)
         
     def _validate_output_rows(self, row_to_data):
         with open("../output/songdetails.csv", mode='r') as file:
@@ -60,19 +122,24 @@ class TestScraper(unittest.TestCase):
             for index, row in enumerate(csv_reader):
                 if index in row_to_data:
                     row_data = row_to_data[index]
-                    self.assertEqual(row[0], row_data[0])
-                    self.assertEqual(row[-1], row_data[1])
-        
-    def _clean_up(self):
-        self._delete_directory('output')
-        self._delete_directory('songcache')
+                    self.assertEqual(row[0], row_data[0], f"Output row start does not match [{row_data[0]}]!")
+                    self.assertEqual(row[-1], row_data[1], f"Output row end does not match [{row_data[1]}]!")
 
     def _delete_directory(self, directory: str) -> str:
         current_script_dir = Path(__file__).resolve().parent
         target_directory = current_script_dir.parent
         default_dir = target_directory / directory
         
-        shutil.rmtree(default_dir)
+        if default_dir.exists():
+            shutil.rmtree(default_dir)
+    
+    def _check_and_delete_file(self, path):
+        file_path = Path(path)
+        self.assertTrue(file_path.exists(), f"File at [{path}] does not exist!")
+        parent_dir = file_path.parent
+
+        if parent_dir.exists() and parent_dir.is_dir():
+            shutil.rmtree(parent_dir)
 
 if __name__ == '__main__':
     unittest.main()

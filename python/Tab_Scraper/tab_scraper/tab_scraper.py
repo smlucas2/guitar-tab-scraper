@@ -8,6 +8,7 @@ This utility will scrapethe "Ultimate Guitar" website and obtain the tabulations
 import json
 import random
 import time
+import sys
 from typing import Optional, List, Dict, Union
 
 import requests
@@ -26,13 +27,13 @@ class UltimateGuitarScraper:
     
     def __init__(
             self, 
-            out_path: Optional[str] = None, 
-            cache_path: Optional[str] = None, 
-            log_path: Optional[str] = None
+            out_dir: Optional[str] = None, 
+            cache_dir: Optional[str] = None, 
+            log_dir: Optional[str] = None
         ) -> None:
         
-        self.song_cache = SongCacher(cache_path)
-        self.outputer = SongDetailsOutputer(out_path)
+        self.cacher = SongCacher(cache_dir)
+        self.outputer = SongDetailsOutputer(out_dir)
         # TODO: create logger
         
     def scrape_songs(self) -> None:
@@ -65,7 +66,7 @@ class UltimateGuitarScraper:
         self.outputer.output(song_details)
     
     def clear_cache(self) -> None:
-        self.song_cache.clear_cache()
+        self.cacher.clear_cache()
         
     def _scrape_urls(self, page: int) -> None:
         page_url = self._build_explorer_page_url(page)
@@ -78,7 +79,7 @@ class UltimateGuitarScraper:
         return tab_urls
     
     def _scrape_page_details(self, urls: List[str]) -> List[Dict[str, str]]:
-        cached_songs = self.song_cache.get_cached_songs()
+        cached_songs = self.cacher.get_cached_songs()
         
         page_details = []
         for url in urls:
@@ -117,7 +118,7 @@ class UltimateGuitarScraper:
         song_details_map['VIEWS'] = self._get_value(song_view_data, url, 'stats', 'view_total')
         song_details_map['FAVORITES'] = self._get_value(song_view_data, url, 'stats', 'favorites_count')
         
-        self.song_cache.cache_song(url, song_details_map)
+        self.cacher.cache_song(url, song_details_map)
         
         return song_details_map
         
@@ -127,7 +128,12 @@ class UltimateGuitarScraper:
         return 'https://www.ultimate-guitar.com/explore?type[]=Tabs&page=' + str(page)
     
     def _request_site_data_json(self, song_url: str) -> NestedDict:
-        response = requests.get(song_url)
+        try:
+            response = requests.get(song_url)
+        except:
+            print(f"Bad URL [{song_url}].")
+            sys.exit(1)
+            
         content = BeautifulSoup(response.content, 'html.parser')
         clean_content = self._clean_content(content)
         json_content = json.loads(clean_content)['store']['page']['data']
