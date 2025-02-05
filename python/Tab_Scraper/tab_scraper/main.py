@@ -12,7 +12,7 @@ def _build_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Web scraper for guitar tabs")
     parser.add_argument("-t", "--tab", type=str, help="Tab URL to scrape")
     parser.add_argument("--output", type=str, default=None, help="Output directory. Defaults to [Tab_Scraper/output] directory.")
-    parser.add_argument("--cache", type=str, default=None, help="Cache directory. Defaults to [Tab_Scraper/songcache] directory.")
+    parser.add_argument("--cache", type=str, default=None, help="Cache directory. Defaults to [Tab_Scraper/cache] directory.")
     parser.add_argument("--logs", type=str, default=None, help="Log directory. Defaults to [Tab_Scraper/logs] directory.")
     parser.add_argument("-c", action='store_true', help="Clears the song cache.")
     return parser.parse_args()

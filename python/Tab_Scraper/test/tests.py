@@ -17,6 +17,7 @@ import csv
 from util.mock_site_builder import create_mock_site
 from tab_scraper.tab_scraper import UltimateGuitarScraper
 
+# TODO: test default paths for output/cache/logs
 # TODO: test custom logs path works
 # TODO: Test bad custom log path
 class TestScraper(unittest.TestCase):
@@ -66,13 +67,15 @@ class TestScraper(unittest.TestCase):
             
         self._check_and_delete_file(out_path + '/songdetails.csv')
 
-    def test_bad_custom_output(self):
+    # TODO: Fix, no longer throws error, goes to default
+    def test_bad_custom_output_path(self):
         with self.assertRaises(SystemExit) as cm:
             out_path = './parent1/parent2/parent3'
             UltimateGuitarScraper(out_dir=out_path)
             
         self.assertEqual(cm.exception.code, 1)
 
+    # TODO: Fix, no longer throws error, goes to default
     def test_bad_custom_output_chars(self):
         with self.assertRaises(SystemExit) as cm:
             out_path = 'sadsad??['
@@ -88,22 +91,44 @@ class TestScraper(unittest.TestCase):
             
         self._check_and_delete_file(cache_path + '/songcache.db.bak')
 
-    def test_bad_custom_cache(self):
+    # TODO: Fix, no longer throws error, goes to default
+    def test_bad_custom_cache_path(self):
         with self.assertRaises(SystemExit) as cm:
             cache_path = './parent1/parent2/parent3'
             UltimateGuitarScraper(cache_dir=cache_path)
             
         self.assertEqual(cm.exception.code, 1)
 
+    # TODO: Fix, no longer throws error, goes to default
     def test_bad_custom_cache_chars(self):
         with self.assertRaises(SystemExit) as cm:
             cache_path = '<>asdf44'
             UltimateGuitarScraper(cache_dir=cache_path)
             
         self.assertEqual(cm.exception.code, 1)
-        
+    
     # def test_custom_logs_path(self):
-    #     None
+    #     logs_path = './testoutput'
+    #     scraper = UltimateGuitarScraper(logs_path=logs_path)
+    #     with patch('requests.get', self.session.get):
+    #         scraper.scrape_url('https://tabs.ultimate-guitar.com/tab/band1/song1')
+            
+    #     # TODO file name
+    #     self._check_and_delete_file(logs_path + '/log')
+    
+    # def test_bad_custom_logs(self):
+    #     with self.assertRaises(SystemExit) as cm:
+    #         logs_path = './parent1/parent2/parent3'
+    #         UltimateGuitarScraper(logs_path=logs_path)
+            
+    #     self.assertEqual(cm.exception.code, 1)
+    
+    # def test_bad_custom_logs_chars(self):
+    #     with self.assertRaises(SystemExit) as cm:
+    #         logs_path = 'sadsad??['
+    #         UltimateGuitarScraper(logs_path=logs_path)
+            
+    #     self.assertEqual(cm.exception.code, 1)
         
     def test_clear_cache(self):
         scraper = UltimateGuitarScraper()

@@ -14,15 +14,19 @@ from typing import Optional, List, Dict, Union
 import requests
 from bs4 import BeautifulSoup
 
-from tab_scraper.util import SongCacher, SongDetailsOutputer
+from tab_scraper.util import SongCacher, SongDetailsOutputer, SongLogger
 
 NestedDict = Dict[str, Union[str, "NestedDict"]]
 
-# TODO: add logger class with logging
+# TODO: fix existing tests
+# TODO: test logging
+# TODO: add limit/offset to song scraping to do it in batches if wanted
+# TODO: test limit/offset
+# TODO: test command line usage! might need some kind of limit so it doesnt take all day
+# TODO: reorder imports and methods
+# TODO: add docs to all public methods
 # TODO: update README
 # TODO: update pyproject
-# TODO: update tests
-# TODO: add docs to all public methods
 class UltimateGuitarScraper:
     
     def __init__(
@@ -34,14 +38,13 @@ class UltimateGuitarScraper:
         
         self.outputer = SongDetailsOutputer(out_dir)
         self.cacher = SongCacher(cache_dir)
-        # TODO: create logger
+        self.logger = SongLogger(log_dir, __name__)
         
     def scrape_songs(self) -> None:
+        self._print_and_log_info("Beginning scraping of Ultimate Guitar for tabs.")
         start_time = time.time()
-        print("Beginning scraping of Ultimate Guitar for tabs.")
         
         song_details = []
-        
         try:
             page = 1
             while True:
@@ -49,19 +52,19 @@ class UltimateGuitarScraper:
                 song_details.extend(self._scrape_page_details(urls))
                 page += 1
         except:
-            print("End of song list reached.")
+            self.logger.info("End of song pages reached.")
                 
         end_time = time.time()
         elapsed_time = int(end_time - start_time)
-        print(f"Scraping completed in {elapsed_time}s.")
-        print(f"Extracted details of {str(len(song_details))} songs.")
+        self._print_and_log_info(f"Scraping completed in {elapsed_time}s.")
+        self._print_and_log_info(f"{str(len(song_details))} songs extracted.")
         
         self.outputer.output(song_details)
     
     def scrape_url(self, url: str) -> None:
-        print("Scraping song from Ultimate Guitar at URL [" + url + "].")
+        self._print_and_log_info("Scraping song at URL [{url}].")
         song_details = [self._scrape_song_details(url)]
-        print("Scraping completed.")
+        self._print_and_log_info("Scraping completed.")
         
         self.outputer.output(song_details)
     
@@ -69,12 +72,12 @@ class UltimateGuitarScraper:
         self.cacher.clear_cache()
         
     def _scrape_urls(self, page: int) -> None:
-        page_url = self._build_explorer_page_url(page)
-        explorer_dict = self._request_site_data_json(page_url)['data']['tabs']
+        explorer_url = self._build_explorer_page_url(page)
+        explorer_data = self._request_url_data_json(explorer_url)['data']['tabs']
         
         tab_urls = []
-        for explorer_data in explorer_dict:
-            tab_urls.append(explorer_data['tab_url'])
+        for explorer_datum in explorer_data:
+            tab_urls.append(explorer_datum['tab_url'])
             
         return tab_urls
     
@@ -84,12 +87,12 @@ class UltimateGuitarScraper:
         page_details = []
         for url in urls:
             if url in cached_songs:
-                print("Using cached values for song details with URL [" + url + "].")
+                self.logger.info(f"Using cached values for song details with URL [{url}].")
                 page_details.append(cached_songs.get(url))
             else:
                 song_details = self._scrape_song_details(url)
                 page_details.append(song_details)
-                print("Song details obtained for URL [" + url + "].")
+                self.logger.info(f"Song details obtained for URL [{url}].")
             
                 # Delaying to be respectful to website resources
                 time.sleep(random.uniform(1, 3))
@@ -97,11 +100,12 @@ class UltimateGuitarScraper:
         return page_details
         
     def _scrape_song_details(self, url: str) -> Dict[str, str]:
-        song_data = self._request_site_data_json(url)
+        song_data = self._request_url_data_json(url)
         song_tab_data = song_data['tab']
         song_view_data = song_data['tab_view']
         
-        song_details_map = {'ID': self._get_nested_value(url, song_tab_data, 'id')}
+        song_details_map = {}
+        song_details_map['ID'] = self._get_nested_value(url, song_tab_data, 'id')
         song_details_map['SONG_ID'] = self._get_nested_value(url, song_tab_data, 'song_id')
         song_details_map['ARTIST_ID'] = self._get_nested_value(url, song_tab_data, 'artist_id')
         tab_data = self._get_nested_value(url, song_view_data, 'wiki_tab', 'content')
@@ -127,11 +131,12 @@ class UltimateGuitarScraper:
             return 'https://www.ultimate-guitar.com/explore?type[]=Tabs'
         return 'https://www.ultimate-guitar.com/explore?type[]=Tabs&page=' + str(page)
     
-    def _request_site_data_json(self, song_url: str) -> NestedDict:
+    def _request_url_data_json(self, url: str) -> NestedDict:
         try:
-            response = requests.get(song_url)
+            response = requests.get(url)
         except:
-            print(f"Bad URL [{song_url}].")
+            self.logger.error(f"Bad URL [{url}].")
+            print(f"Bad URL [{url}].")
             sys.exit(1)
             
         content = BeautifulSoup(response.content, 'html.parser')
@@ -155,5 +160,9 @@ class UltimateGuitarScraper:
                 json = json[key]
             return json
         except:
-            print("Failed to find [" + key + "] value for song at URL [" + song_url + "].")
+            self.logger.warn(f"Failed to find [{key}] value for song at URL [{song_url}].")
             return ''
+        
+    def _print_and_log_info(self, msg):
+        self.logger.info(msg)
+        print(msg)
