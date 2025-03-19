@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import atexit
 import shelve
 import logging
 import csv
@@ -80,6 +81,7 @@ class SongLogger(SongFileWriter):
         )
         
         self.logger = logging.getLogger(module_name)
+        atexit.register(logging.shutdown)
 
     def info(self, msg: str) -> None:
         self.logger.info(msg)
