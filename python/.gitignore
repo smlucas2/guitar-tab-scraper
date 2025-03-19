@@ -41,7 +41,7 @@ htmlcov/
 output/
 
 # Cache files
-songcache/
+cache/
 
 # Logs
 logs/
