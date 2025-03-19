@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: Debug Guitar Tabs",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/python/Tab_Scraper/test/tests.py",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder}/python/Tab_Scraper",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/python/Tab_Scraper"
+        }
+      }
+    ]
+}

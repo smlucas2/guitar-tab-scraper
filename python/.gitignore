@@ -13,7 +13,8 @@ env/
 .env
 
 # IDE settings
-.vscode/
+.vscode/*
+!.vscode/launch.json
 .idea/
 
 # Spyder project settings
