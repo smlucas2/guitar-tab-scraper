@@ -19,11 +19,8 @@ from tab_scraper.util import SongCacher, SongDetailsOutputer, SongLogger
 
 NestedDict = Dict[str, Union[str, "NestedDict"]]
 
-# TODO: fix existing tests
-# TODO: test logging
 # TODO: add limit/offset to song scraping to do it in batches if wanted
 # TODO: test limit/offset
-# TODO: test command line usage! might need some kind of limit so it doesnt take all day
 # TODO: reorder imports and methods
 # TODO: add docs to all public methods
 # TODO: update README

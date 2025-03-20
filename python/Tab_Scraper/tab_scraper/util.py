@@ -15,7 +15,7 @@ class SongFileWriter:
             target_dir = Path(custom_dir)
             if self._is_valid_directory(target_dir):
                 target_dir.mkdir(parents=True, exist_ok=True)
-                return target_dir
+                return target_dir.resolve()
         
         # Bad/No custom dir, using default dir
         current_script_dir = Path(__file__).resolve().parent
@@ -77,7 +77,8 @@ class SongLogger(SongFileWriter):
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             filename=self.log_dir,
-            filemode='w'
+            filemode='w',
+            force=True
         )
         
         self.logger = logging.getLogger(module_name)
