@@ -15,7 +15,7 @@ git clone https://github.com/smlucas2/guitar-tab-scraper.git
 ## Usage
 Navigate to the project directory:
 ```
-cd python/Tab_Scraper/tab-scraper
+cd python/Tab_Scraper/tab_scraper
 ```
 
 To bulk scrape multiple pages from Ultimate Guitar, run:
