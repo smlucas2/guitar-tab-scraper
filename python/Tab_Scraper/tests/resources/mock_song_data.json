@@ -1,0 +1,62 @@
+{
+    "song_data_1":{
+        "id_":"0001",
+        "song_id":"1001",
+        "artist_id":"0001",
+        "song_name":"Best Song Ever",
+        "artist_name":"The Besties",
+        "difficulty":"Easy",
+        "rating":"5",
+        "votes":"150",
+        "content":"[tab]e|------0------|[/tab]",
+        "value":"E A D G B E",
+        "tonality":"Em",
+        "view_total":"150000",
+        "favorites_count":"125000"
+    },
+    "song_data_2":{
+        "id_": "0002",
+        "song_id": "1002",
+        "artist_id": "0001",
+        "song_name": "Worst Song Ever",
+        "artist_name": "The Besties",
+        "difficulty": "Easy",
+        "rating": "1",
+        "votes": "60",
+        "content": "[tab]e|------2------|[/tab]",
+        "value": "E A D G B E",
+        "tonality": "Em",
+        "view_total": "100000",
+        "favorites_count": "4"
+    },
+    "song_data_3":{
+        "id_": "0003",
+        "song_id": "1001",
+        "artist_id": "0002",
+        "song_name": "Who Cares",
+        "artist_name": "Punks",
+        "difficulty": "Hard",
+        "rating": "4",
+        "votes": "7000",
+        "content": "[tab]e|---1--0----7-|[/tab]",
+        "value": "E A D G B E",
+        "tonality": "Em",
+        "view_total": "2000",
+        "favorites_count": "1000"
+    },
+    "song_data_4":{   
+        "id_": "0004",
+        "song_id": "1002",
+        "artist_id": "0002",
+        "song_name": "I Do",
+        "artist_name": "Punks",
+        "difficulty": "Hard",
+        "rating": "3",
+        "votes": "14000",
+        "content": "[tab]e|---4--0--44--|[/tab]",
+        "value": "E A D G B E",
+        "tonality": "Em",
+        "view_total": "10000",
+        "favorites_count": "8000"
+    }
+}
