@@ -11,6 +11,8 @@ def main() -> None:
 def _build_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Web scraper for guitar tabs")
     parser.add_argument("-t", "--tab", type=str, help="Tab URL to scrape")
+    parser.add_argument("-l", "--limit", type=int, default=None, help="Limit on the amount of pages to scrape")
+    parser.add_argument("-o", "--offset", type=int, default=0, help="Offset on the amount of pages to scrape")
     parser.add_argument("--output", type=str, default=None, help="Output directory. Defaults to [Tab_Scraper/output] directory.")
     parser.add_argument("--cache", type=str, default=None, help="Cache directory. Defaults to [Tab_Scraper/cache] directory.")
     parser.add_argument("--logs", type=str, default=None, help="Log directory. Defaults to [Tab_Scraper/logs] directory.")
@@ -25,7 +27,7 @@ def _run_scraper(args: ArgumentParser) -> None:
     if args.tab:
         scraper.scrape_url(args.tab)
     else:
-        scraper.scrape_songs()
+        scraper.scrape_songs(args.limit, args.offset)
 
 if __name__ == '__main__':
     main()

@@ -43,6 +43,14 @@ def _build_mock_explorer(mock_adapter: Adapter) -> None:
         status_code=404
     )
     
+    # Offset page
+    mock_adapter.register_uri(
+        "GET", 
+        urljoin(EXPLORER_URL, "explore?type[]=Tabs&page=11"), 
+        text="Not Found", 
+        status_code=404
+    )
+    
 def _build_mock_tabs(mock_adapter: Adapter) -> None:
     mock_song_data = json.loads(_get_resource_contents("mock_song_data.json"))
     

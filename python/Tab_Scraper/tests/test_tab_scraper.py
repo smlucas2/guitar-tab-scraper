@@ -14,7 +14,10 @@ import requests
 import requests_mock
 import shutil
 import csv
+import sys
+import os
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from util.mock_site_builder import create_mock_site
 from tab_scraper.tab_scraper import UltimateGuitarScraper
 
@@ -42,6 +45,62 @@ class TestScraper(unittest.TestCase):
                     
         row_to_data = {1: ['0001', '125000'], 4: ['0004', '8000']}
         self._validate_output_rows(row_to_data)
+        
+    def test_scrape_songs_with_limit(self):
+        scraper = UltimateGuitarScraper()
+        with patch('requests.get', self.session.get):
+            scraper.scrape_songs(limit=1)
+                    
+        row_to_data = {1: ['0001', '125000'], 2: ['0002', '4']}
+        self._validate_output_rows(row_to_data)
+        
+    def test_scrape_songs_with_offset(self):
+        scraper = UltimateGuitarScraper()
+        with patch('requests.get', self.session.get):
+            scraper.scrape_songs(offset=1)
+                    
+        row_to_data = {1: ['0003', '1000'], 2: ['0004', '8000']}
+        self._validate_output_rows(row_to_data)
+        
+    def test_scrape_songs_with_limit_and_offset(self):
+        scraper = UltimateGuitarScraper()
+        with patch('requests.get', self.session.get):
+            scraper.scrape_songs(limit=1, offset=1)
+                    
+        row_to_data = {1: ['0003', '1000'], 2: ['0004', '8000']}
+        self._validate_output_rows(row_to_data)
+        
+    def test_scrape_songs_with_zero_limit(self):
+        scraper = UltimateGuitarScraper()
+        with self.assertRaises(SystemExit) as cm:
+            with patch('requests.get', self.session.get):
+                scraper.scrape_songs(limit=0)
+            
+        self.assertEqual(cm.exception.code, 1)
+            
+    def test_scrape_songs_with_negative_limit(self):
+        scraper = UltimateGuitarScraper()
+        with self.assertRaises(SystemExit) as cm:
+            with patch('requests.get', self.session.get):
+                scraper.scrape_songs(limit=-1)
+            
+        self.assertEqual(cm.exception.code, 1)
+            
+    def test_scrape_songs_with_negative_offset(self):
+        scraper = UltimateGuitarScraper()
+        with patch('requests.get', self.session.get):
+            scraper.scrape_songs(offset=-1)
+                    
+        row_to_data = {1: ['0001', '125000'], 4: ['0004', '8000']}
+        self._validate_output_rows(row_to_data)
+            
+    def test_scrape_songs_with_large_offset(self):
+        scraper = UltimateGuitarScraper()
+        with self.assertRaises(SystemExit) as cm:
+            with patch('requests.get', self.session.get):
+                scraper.scrape_songs(offset=10)
+            
+        self.assertEqual(cm.exception.code, 1)
     
     def test_scrape_song(self):
         scraper = UltimateGuitarScraper()

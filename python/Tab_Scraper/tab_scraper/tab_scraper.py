@@ -19,13 +19,6 @@ from tab_scraper.util import SongCacher, SongDetailsOutputer, SongLogger
 
 NestedDict = Dict[str, Union[str, "NestedDict"]]
 
-# TODO: add limit/offset to song scraping to do it in batches if wanted
-# TODO: test limit/offset
-# TODO: reorder imports and methods
-# TODO: add docs to all public methods
-# TODO: update README
-# TODO: update pyproject
-
 class UltimateGuitarScraper:
 
     def __init__(
@@ -34,22 +27,48 @@ class UltimateGuitarScraper:
             cache_dir: Optional[str] = None,
             log_dir: Optional[str] = None
         ) -> None:
-
+        """
+        Initialize the UltimateGuitarScraper with optional custom directories.
+        
+        Args:
+            out_dir: Optional custom directory for output files. If None, uses default directory.
+            cache_dir: Optional custom directory for cache files. If None, uses default directory.
+            log_dir: Optional custom directory for log files. If None, uses default directory.
+        """
         self.outputer = SongDetailsOutputer(out_dir)
         self.cacher = SongCacher(cache_dir)
         self.logger = SongLogger(log_dir, __name__)
 
-    def scrape_songs(self) -> None:
+    def scrape_songs(self, limit: Optional[int] = None, offset: Optional[int] = 0) -> None:
+        """
+        Scrape songs from Ultimate Guitar website.
+        
+        Args:
+            limit: Optional maximum number of pages to scrape. If None, scrape until the end.
+            offset: Optional starting page number (0-based index). Default is 0 (start from page 1).
+        """
         self._print_and_log_info("Beginning scraping of Ultimate Guitar for tabs.")
         start_time = time.time()
 
+        if limit is not None:
+            limit = self._normalize_limit(limit)
+        offset = self._normalize_offset(offset)
+            
         song_details = []
         try:
-            page = 1
+            page = offset + 1
+            pages_scraped = 0
+            
             while True:
+                if limit is not None and pages_scraped >= limit:
+                    self.logger.info(f"Reached limit of {limit} pages. Stopping scrape.")
+                    break
+                
                 urls = self._scrape_urls(page)
                 song_details.extend(self._scrape_page_details(urls))
+                
                 page += 1
+                pages_scraped += 1
         except:
             self.logger.info("End of song pages reached.")
 
@@ -61,6 +80,12 @@ class UltimateGuitarScraper:
         self.outputer.output(song_details)
 
     def scrape_url(self, url: str) -> None:
+        """
+        Scrape a single song from the specified Ultimate Guitar URL.
+        
+        Args:
+            url: The URL of the song tab to scrape.
+        """
         self._print_and_log_info(f"Scraping song at URL [{url}].")
         song_details = [self._scrape_song_details(url)]
         self._print_and_log_info("Scraping completed.")
@@ -68,6 +93,9 @@ class UltimateGuitarScraper:
         self.outputer.output(song_details)
 
     def clear_cache(self) -> None:
+        """
+        Clear the song cache to force re-scraping of all songs.
+        """
         self.cacher.clear_cache()
 
     def _scrape_urls(self, page: int) -> List[str]:
@@ -120,6 +148,22 @@ class UltimateGuitarScraper:
         self.cacher.cache_song(url, song_details_map)
 
         return song_details_map
+    
+    def _normalize_limit(self, limit: int) -> int:
+        limit = max(0, limit)
+        if limit == 0:
+            self.logger.warn("Limit set to 0, no songs will be scraped. Closing scraper.")
+            sys.exit(1)
+
+        self._print_and_log_info(f"Will scrape a maximum of {limit} pages.")
+        return limit
+    
+    def _normalize_offset(self, offset: int) -> int:
+        offset = max(0, offset)
+        if offset > 0:
+            self._print_and_log_info(f"Starting from page {offset + 1}.")
+
+        return offset
 
     def _build_explorer_page_url(self, page: int) -> str:
         return f'https://www.ultimate-guitar.com/explore?type[]=Tabs&page={page}' if page != 1 else 'https://www.ultimate-guitar.com/explore?type[]=Tabs'
@@ -127,6 +171,7 @@ class UltimateGuitarScraper:
     def _request_url_data_json(self, url: str) -> NestedDict:
         try:
             response = requests.get(url)
+            response.raise_for_status()
         except:
             self.logger.error(f"Bad URL [{url}].")
             print(f"Bad URL [{url}].")

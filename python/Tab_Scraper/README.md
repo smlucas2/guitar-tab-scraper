@@ -4,7 +4,7 @@ A Python-based web scraper designed to extract guitar tabs and surrounding detai
 ## Features
 - Scrapes guitar tabs from Ultimate Guitar
 - Implements respectful scraping practices with random delays
-- Allows user to specify the number of pages to scrape
+- Allows user to specify the number of pages to scrape with offset
 
 ## Installation
 1. Clone this repository:
@@ -20,18 +20,13 @@ A Python-based web scraper designed to extract guitar tabs and surrounding detai
 Run the scraper from the command line.
 To bulk scrape multiple pages from Ultimate Guitar:
 ```
-python tab_scraper.py -p <number_of_pages>
+python tab_scraper.py --limit <page_limit> --offset <page_offset>
 ```
-Replace `<number_of_pages>` with the number of pages you want to scrape. Defaults to 1 page.
+Replace `<page_limit>` with the number of pages you want to scrape.
+Replace `<page_offset>` with the offset of pages you want to scrape.
 
 To scrape a single song:
 ```
-python tab_scraper.py -s <song_url>
+python tab_scraper.py --tab <tab_url>
 ```
-Replace `<song_url>` with the URL of the song you want to scrape.
-
-### Example
-To scrape 5 pages:
-```
-python tab_scraper.py -p 5
-```
+Replace `<tab_url>` with the URL of the song you want to scrape.
